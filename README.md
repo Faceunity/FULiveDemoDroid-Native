@@ -4,6 +4,11 @@
 
 FuLiveNativeDemoDroid 是集成了 Faceunity 面部跟踪和虚拟道具功能基于 android NDK 环境开发的demo。该demo在java中实现布局以及camera对数据的采集，并在native层实现faceunity的基本功能以及画面的绘制。
 
+## 更新SDK
+
+[**Nama SDK发布地址**](https://github.com/Faceunity/FULiveDemoDroid/releases),可查看Nama SDK的所有版本和发布说明。
+更新方法为下载Faceunity*.zip解压后替换faceunity模块中的相应库文件。
+
 ## SDK使用介绍
 
  - Faceunity SDK的使用方法请参看 [**Faceunity/FULiveDemoDroid**][1]

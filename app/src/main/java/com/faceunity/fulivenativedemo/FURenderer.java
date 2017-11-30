@@ -49,7 +49,7 @@ public class FURenderer implements FaceunityControlView.OnViewEventListener {
     /**
      * 需要GL环境，切换摄像头时重置一些native数据
      */
-    public native void switchCamera();
+    public native void switchCamera(int cameraType);
 
     /**
      * 不需要GL环境，重置美颜、滤镜以及道具数据

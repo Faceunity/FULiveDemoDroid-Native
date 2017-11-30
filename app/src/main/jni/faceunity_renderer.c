@@ -23,6 +23,10 @@ volatile char *mEffectName = "none";
 
 volatile int itemsArray[] = {0, 0};
 
+int mCameraType;
+
+int mIsTracking = -1;
+
 int createEffect(JNIEnv *env, jobject assetManager, char *name) {
 
     if (strncmp("none", name, 4) == 0) {
@@ -38,6 +42,8 @@ int createEffect(JNIEnv *env, jobject assetManager, char *name) {
             return 0;
         }
         itemsArray[1] = fuAndroidNativeCreateItemFromPackage(effectData, effectSize);
+        fuAndroidNativeItemSetParamd(itemsArray[1], "isAndroid", 1.0);
+        fuAndroidNativeItemSetParamd(itemsArray[1], "rotationAngle", mCameraType == 1 ? 90 : 270);
         if (temp != 0) {
             fuAndroidNativeDestroyItem(temp);
         }
@@ -69,6 +75,8 @@ Java_com_faceunity_fulivenativedemo_FURenderer_onSurfaceCreated(JNIEnv *env, job
     free(v3);
     free(beautification);
 
+    LOGE("version %s ", fuAndroidNativGetVersion());
+
     //判断当前显示的道具状态，并加载相应的道具
     createEffect(env, manager, mEffectName);
 }
@@ -87,6 +95,12 @@ Java_com_faceunity_fulivenativedemo_FURenderer_onDrawFrame(JNIEnv *env, jobject 
 
     jbyte *img = (*env)->GetByteArrayElements(env, img_, NULL);
     jfloat *mtx = (*env)->GetFloatArrayElements(env, mtx_, NULL);
+
+    int isTracking = fuAndroidNativeIsTracking();
+    if (mIsTracking != isTracking) {
+        LOGE("isTracking %d ", isTracking);
+        mIsTracking = isTracking;
+    }
 
     //设置一系列美颜参数
     fuAndroidNativeItemSetParamd(itemsArray[0], "color_level", mFacebeautyColorLevel);
@@ -124,14 +138,15 @@ Java_com_faceunity_fulivenativedemo_FURenderer_onSurfaceDestory(JNIEnv *env, job
 }
 
 JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_switchCamera(JNIEnv *env, jobject instance) {
+Java_com_faceunity_fulivenativedemo_FURenderer_switchCamera(JNIEnv *env, jobject instance,
+                                                            jint cameraType) {
+    mCameraType = cameraType;
     fuOnCameraChange();
 }
 
 
 JNIEXPORT void JNICALL
 Java_com_faceunity_fulivenativedemo_FURenderer_resetStatus(JNIEnv *env, jobject instance) {
-
 
     frame_id = 0;
 
@@ -147,6 +162,8 @@ Java_com_faceunity_fulivenativedemo_FURenderer_resetStatus(JNIEnv *env, jobject 
     mEffectName = "none";
 
     itemsArray[0] = itemsArray[1] = 0;
+
+    mIsTracking = -1;
 }
 
 JNIEXPORT int JNICALL

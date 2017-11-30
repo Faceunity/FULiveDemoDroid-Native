@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
 
     private void startCamera() {
         if (Thread.currentThread().getId() == glThreadId) {
-            mFURenderer.switchCamera();
+            mFURenderer.switchCamera(cameraType);
             releaseCameraTexture();
             mSurfaceTexture = new SurfaceTexture(getCameraTexture());
             try {

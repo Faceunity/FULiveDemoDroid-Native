@@ -17,7 +17,7 @@
 
     </com.faceunity.fulivenativedemo.AspectFrameLayout>
 
-    <com.faceunity.fulivenativedemo.FaceunityControlView
+    <com.faceunity.beautycontrolview.BeautyControlView
         android:id="@+id/faceunity_control"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -28,7 +28,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:src="@mipmap/ic_detect_tip"
+        android:src="@drawable/ic_detect_tip"
         android:visibility="gone"/>
 
     <Button
@@ -38,6 +38,6 @@
         android:layout_alignParentRight="true"
         android:layout_alignParentTop="true"
         android:layout_margin="@dimen/max_space"
-        android:background="@mipmap/camera_front"
+        android:background="@drawable/camera_front"
         android:onClick="switchCamera"/>
 </RelativeLayout>

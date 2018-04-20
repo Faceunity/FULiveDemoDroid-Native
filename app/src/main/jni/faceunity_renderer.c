@@ -1,100 +1,119 @@
-#include <jni.h>
-#include <pthread.h>
+//
+// Created by Jiahua Tu on 2018/4/19.
+//
 
-#include "authpack.h"
+#include <jni.h>
+#include <string.h>
+
 #include "GlUtils.h"
 #include "android_native_interface.h"
-#include "android_util.h"
-
-volatile int isSetupComplete = 0;
+#include "faceunity_renderer.h"
 
 volatile int frame_id = 0;
 
-volatile float mFacebeautyColorLevel = 0.2f;
-volatile float mFacebeautyBlurLevel = 6.0f;
-volatile float mFacebeautyCheeckThin = 1.0f;
-volatile float mFacebeautyEnlargeEye = 0.5f;
-volatile float mFacebeautyRedLevel = 0.5f;
-volatile int mFaceShape = 3;
-volatile float mFaceShapeLevel = 0.5f;
+//美颜和滤镜的默认参数
+int isNeedUpdateFaceBeauty = 1;
+float mFaceBeautyFilterLevel = 1.0f;//滤镜强度
+char *mFilterName = "origin";
 
-volatile char *mFilterName = "nature";
+float mFaceBeautyALLBlurLevel = 1.0f;//精准磨皮
+float mFaceBeautyType = 0.0f;//美肤类型
+float mFaceBeautyBlurLevel = 0.7f;//磨皮
+float mFaceBeautyColorLevel = 0.5f;//美白
+float mFaceBeautyRedLevel = 0.5f;//红润
+float mBrightEyesLevel = 0.0f;//亮眼
+float mBeautyTeethLevel = 0.0f;//美牙
+
+float mFaceBeautyFaceShape = 4.0f;//脸型
+float mFaceShapeLevel = 1.0f;//程度
+float mFaceBeautyEnlargeEye = 0.4f;//大眼
+float mFaceBeautyCheekThin = 0.4f;//瘦脸
+float mChinLevel = 0.3f;//下巴
+float mForeheadLevel = 0.3f;//额头
+float mThinNoseLevel = 0.5f;//瘦鼻
+float mMouthShape = 0.4f;//嘴形
+
 volatile char *mEffectName = "none";
 
-volatile int itemsArray[] = {0, 0};
+static int ITEM_ARRAYS_FACE_BEAUTY_INDEX = 0;
+static int ITEM_ARRAYS_EFFECT = 1;
+static int ITEM_ARRAYS_ANIMOJI_3D = 2;
+volatile int itemsArray[] = {0, 0, 0};
 
-int mCameraType;
+int mCameraType = 1;
+int mInputImageOrientation = 270;
 
 int mIsTracking = -1;
+int systemErrorStatus = 0;//success number
 
-int createEffect(JNIEnv *env, jobject assetManager, char *name) {
+void updateEffectItemParams(int itemHandle) {
+    fuAndroidNativeItemSetParamd(itemHandle, "isAndroid", 1.0);
 
-    if (strncmp("none", name, 4) == 0) {
-        fuAndroidNativeDestroyItem(itemsArray[1]);
-        itemsArray[1] = 0;
-    } else {
-        int temp = itemsArray[1];
-        void *effectData;
-        int effectSize;
-        readAssets(env, assetManager, name, &effectData, &effectSize);
-        if (isSetupComplete == 0) {
-            free(effectData);
-            return 0;
-        }
-        itemsArray[1] = fuAndroidNativeCreateItemFromPackage(effectData, effectSize);
-        fuAndroidNativeItemSetParamd(itemsArray[1], "isAndroid", 1.0);
-        fuAndroidNativeItemSetParamd(itemsArray[1], "rotationAngle", mCameraType == 1 ? 90 : 270);
-        if (temp != 0) {
-            fuAndroidNativeDestroyItem(temp);
-        }
-        free(effectData);
-    }
-    return 1;
+    //rotationAngle 参数是用于旋转普通道具
+    fuAndroidNativeItemSetParamd(itemHandle, "rotationAngle", 360 - mInputImageOrientation);
+
+    //这两句代码用于识别人脸默认方向的修改，主要针对animoji道具的切换摄像头倒置问题
+    fuAndroidNativeItemSetParamd(itemHandle, "camera_change", 1.0);
+    fuSetDefaultRotationMode((360 - mInputImageOrientation) / 90);
+    //is3DFlipH 参数是用于对3D道具的镜像
+    fuAndroidNativeItemSetParamd(itemHandle, "is3DFlipH", mCameraType == 0 ? 1 : 0);
+    //isFlipExpr 参数是用于对人像驱动道具的镜像
+    fuAndroidNativeItemSetParamd(itemHandle, "isFlipExpr", mCameraType == 0 ? 1 : 0);
+    //loc_y_flip与loc_x_flip 参数是用于对手势识别道具的镜像
+    fuAndroidNativeItemSetParamd(itemHandle, "loc_y_flip", mCameraType == 0 ? 1 : 0);
+    fuAndroidNativeItemSetParamd(itemHandle, "loc_x_flip", mCameraType == 0 ? 1 : 0);
 }
 
-JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onSurfaceCreated(JNIEnv *env, jobject instance,
-                                                                jobject manager) {
+void createEffect(char *name, void *effectData, int effectSize) {
+
+    if (strncmp("none", name, 4) == 0) {
+        if (itemsArray[ITEM_ARRAYS_EFFECT] > 0)
+            fuAndroidNativeDestroyItem(itemsArray[ITEM_ARRAYS_EFFECT]);
+        itemsArray[ITEM_ARRAYS_EFFECT] = 0;
+    } else {
+        int temp = itemsArray[ITEM_ARRAYS_EFFECT];
+        itemsArray[ITEM_ARRAYS_EFFECT] = fuAndroidNativeCreateItemFromPackage(effectData,
+                                                                              effectSize);
+        updateEffectItemParams(itemsArray[ITEM_ARRAYS_EFFECT]);
+        if (temp > 0) {
+            fuAndroidNativeDestroyItem(temp);
+        }
+    }
+}
+
+void initFURenderer(void *auth, int authSize, void *v3, int v3Size, void *anim, int animSize,
+                    void *arData, int arDataSize) {
+
+    fuAndroidNativeSetup(v3, v3Size, auth, authSize);
+    fuLoadAnimModel(anim, animSize);
+    fuLoadExtendedARData(arData, arDataSize);
+}
+
+void onSurfaceCreated(void *beautification, int beautificationSize, void *fxaa, int fxaaSize) {
+    LOGE("version %s ", fuAndroidNativGetVersion());
     //初始化opengl绘画需要的program
     createProgram();
 
-    //读取assets中的v3.mp3数据，并初始化
-    void *v3;
-    int v3Size;
-    readAssets(env, manager, "v3.mp3", &v3, &v3Size);
-    fuAndroidNativeSetup(v3, v3Size, g_auth_package, sizeof(g_auth_package));
+    itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX] = fuAndroidNativeCreateItemFromPackage(beautification,
+                                                                                     beautificationSize);
 
-    //读取assets中的face_beautification.mp3数据，并初始化
-    void *beautification;
-    int beautificationSize;
-    readAssets(env, manager, "face_beautification.mp3", &beautification, &beautificationSize);
-    itemsArray[0] = fuAndroidNativeCreateItemFromPackage(beautification, beautificationSize);
+    itemsArray[ITEM_ARRAYS_ANIMOJI_3D] = fuAndroidNativeCreateItemFromPackage(fxaa, fxaaSize);
 
-    isSetupComplete = 1;
-
-    free(v3);
-    free(beautification);
-
-    LOGE("version %s ", fuAndroidNativGetVersion());
-
-    //判断当前显示的道具状态，并加载相应的道具
-    createEffect(env, manager, mEffectName);
+    fuSetExpressionCalibration(1);
+    fuAndroidNativeSetDefaultOrientation((360 - mInputImageOrientation) / 90);
 }
 
-JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onSurfaceChanged(JNIEnv *env, jobject instance,
-                                                                jint wight, jint height) {
-    glViewport(0, 0, wight, height);
+void onSurfaceChanged(int x, int y, int width, int height) {
+    glViewport(x, y, width, height);
 }
 
-JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onDrawFrame(JNIEnv *env, jobject instance,
-                                                           jbyteArray img_, jint textureId,
-                                                           jint weight, jint height,
-                                                           jfloatArray mtx_) {
+void onDrawFrame(void *img, int textureId, int width, int height, float *mtx) {
 
-    jbyte *img = (*env)->GetByteArrayElements(env, img_, NULL);
-    jfloat *mtx = (*env)->GetFloatArrayElements(env, mtx_, NULL);
+    int systemError = fuAndroidNativeGetSystemError();
+    if (systemError != systemErrorStatus) {
+        systemErrorStatus = systemError;
+        LOGE("system error %d %s", systemError, fuAndroidNativeGetSystemErrorString(systemError));
+    }
 
     int isTracking = fuAndroidNativeIsTracking();
     if (mIsTracking != isTracking) {
@@ -102,149 +121,207 @@ Java_com_faceunity_fulivenativedemo_FURenderer_onDrawFrame(JNIEnv *env, jobject 
         mIsTracking = isTracking;
     }
 
-    //设置一系列美颜参数
-    fuAndroidNativeItemSetParamd(itemsArray[0], "color_level", mFacebeautyColorLevel);
-    fuAndroidNativeItemSetParamd(itemsArray[0], "blur_level", mFacebeautyBlurLevel);
-    fuAndroidNativeItemSetParamd(itemsArray[0], "cheek_thinning", mFacebeautyCheeckThin);
-    fuAndroidNativeItemSetParamd(itemsArray[0], "eye_enlarging", mFacebeautyEnlargeEye);
-    fuAndroidNativeItemSetParamd(itemsArray[0], "red_level", mFacebeautyRedLevel);
-    fuAndroidNativeItemSetParamd(itemsArray[0], "face_shape", mFaceShape);
-    fuAndroidNativeItemSetParamd(itemsArray[0], "face_shape_level", mFaceShapeLevel);
+    //修改美颜参数
+    if (isNeedUpdateFaceBeauty && itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX] != 0) {
+        //filter_level 滤镜强度 范围0~1 SDK默认为 1
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "filter_level",
+                                     mFaceBeautyFilterLevel);
+        //filter_name 滤镜
+        fuAndroidNativeItemSetParams(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "filter_name",
+                                     mFilterName);
 
-    //设置滤镜
-    fuAndroidNativeItemSetParams(itemsArray[0], "filter_name", mFilterName);
+        //skin_detect 精准美肤 0:关闭 1:开启 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "skin_detect",
+                                     mFaceBeautyALLBlurLevel);
+        //heavy_blur 美肤类型 0:清晰美肤 1:朦胧美肤 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "heavy_blur",
+                                     mFaceBeautyType);
+        //blur_level 磨皮 范围0~6 SDK默认为 6
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "blur_level",
+                                     6.0f * mFaceBeautyBlurLevel);
+        //blur_blend_ratio 磨皮结果和原图融合率 范围0~1 SDK默认为 1
+//          fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "blur_blend_ratio", 1);
 
-    int texture = fuAndroidNativeDualInputToTexture(img, (GLuint) textureId, 1, weight, height,
-                                                    frame_id++,
-                                                    itemsArray, 2, NULL, weight, height, NULL, 0);
+        //color_level 美白 范围0~1 SDK默认为 1
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "color_level",
+                                     mFaceBeautyColorLevel);
+        //red_level 红润 范围0~1 SDK默认为 1
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "red_level",
+                                     mFaceBeautyRedLevel);
+        //eye_bright 亮眼 范围0~1 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "eye_bright",
+                                     mBrightEyesLevel);
+        //tooth_whiten 美牙 范围0~1 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "tooth_whiten",
+                                     mBeautyTeethLevel);
+
+        //face_shape_level 美型程度 范围0~1 SDK默认为1
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "face_shape_level",
+                                     mFaceShapeLevel);
+        //face_shape 脸型 0：女神 1：网红 2：自然 3：默认 SDK默认为 3
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "face_shape",
+                                     mFaceBeautyFaceShape);
+        //eye_enlarging 大眼 范围0~1 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "eye_enlarging",
+                                     mFaceBeautyEnlargeEye);
+        //cheek_thinning 瘦脸 范围0~1 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "cheek_thinning",
+                                     mFaceBeautyCheekThin);
+        //intensity_chin 下巴 范围0~1 SDK默认为 0.5    大于0.5变大，小于0.5变小
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "intensity_chin",
+                                     mChinLevel);
+        //intensity_forehead 额头 范围0~1 SDK默认为 0.5    大于0.5变大，小于0.5变小
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX],
+                                     "intensity_forehead", mForeheadLevel);
+        //intensity_nose 鼻子 范围0~1 SDK默认为 0
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "intensity_nose",
+                                     mThinNoseLevel);
+        //intensity_mouth 嘴型 范围0~1 SDK默认为 0.5   大于0.5变大，小于0.5变小
+        fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX], "intensity_mouth",
+                                     mMouthShape);
+        isNeedUpdateFaceBeauty = 0;
+    }
+
+    int flags = FU_ADM_FLAG_EXTERNAL_OES_TEXTURE;
+    if (mCameraType == 0) {
+        flags |= ANDROID_NATIVE_NAMA_RENDER_OPTION_FLIP_X;
+    }
+    int texture = fuAndroidNativeDualInputToTexture(img, (GLuint) textureId, flags, width, height,
+                                                    frame_id++, itemsArray,
+                                                    sizeof(itemsArray) / sizeof(int), NULL, width,
+                                                    height, NULL, 0);
 
     //把处理完的纹理绘制到屏幕上
     drawFrame(texture, mtx);
-
-    (*env)->ReleaseByteArrayElements(env, img_, img, 0);
-    (*env)->ReleaseFloatArrayElements(env, mtx_, mtx, 0);
 }
 
-JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onSurfaceDestory(JNIEnv *env, jobject instance) {
-    fuAndroidNativeDestroyItem(itemsArray[1]);
-    itemsArray[1] = itemsArray[1] = 0;
-    fuAndroidNativeDestroyItem(itemsArray[0]);
-    itemsArray[0] = itemsArray[0] = 0;
+void onSurfaceDestroy() {
+    resetStatus();
     fuAndroidNativeDestroyAllItems();
     fuAndroidNativeOnDeviceLost();
-
-    isSetupComplete = 0;
+    releaseProgram();
 }
 
-JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_switchCamera(JNIEnv *env, jobject instance,
-                                                            jint cameraType) {
+void switchCamera(int cameraType, int inputImageOrientation) {
     mCameraType = cameraType;
+    mInputImageOrientation = inputImageOrientation;
     fuOnCameraChange();
+    updateEffectItemParams(itemsArray[ITEM_ARRAYS_EFFECT]);
+    fuAndroidNativeSetDefaultOrientation((360 - mInputImageOrientation) / 90);
 }
 
-
-JNIEXPORT void JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_resetStatus(JNIEnv *env, jobject instance) {
+void resetStatus() {
 
     frame_id = 0;
 
-    mFacebeautyColorLevel = 0.2f;
-    mFacebeautyBlurLevel = 6.0f;
-    mFacebeautyCheeckThin = 1.0f;
-    mFacebeautyEnlargeEye = 0.5f;
-    mFacebeautyRedLevel = 0.5f;
-    mFaceShape = 3;
-    mFaceShapeLevel = 0.5f;
+    isNeedUpdateFaceBeauty = 1;
+    mFaceBeautyFilterLevel = 1.0f;//滤镜强度
+    mFilterName = "origin";
 
-    mFilterName = "nature";
+    mFaceBeautyALLBlurLevel = 1.0f;//精准磨皮
+    mFaceBeautyType = 0.0f;//美肤类型
+    mFaceBeautyBlurLevel = 0.7f;//磨皮
+    mFaceBeautyColorLevel = 0.5f;//美白
+    mFaceBeautyRedLevel = 0.5f;//红润
+    mBrightEyesLevel = 0.0f;//亮眼
+    mBeautyTeethLevel = 0.0f;//美牙
+
+    mFaceBeautyFaceShape = 3.0f;//脸型
+    mFaceShapeLevel = 1.0f;//程度
+    mFaceBeautyEnlargeEye = 0.4f;//大眼
+    mFaceBeautyCheekThin = 0.4f;//瘦脸
+    mChinLevel = 0.3f;//下巴
+    mForeheadLevel = 0.3f;//额头
+    mThinNoseLevel = 0.5f;//瘦鼻
+    mMouthShape = 0.4f;//嘴形
+
     mEffectName = "none";
 
-    itemsArray[0] = itemsArray[1] = 0;
+    itemsArray[ITEM_ARRAYS_ANIMOJI_3D] = itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX] = itemsArray[ITEM_ARRAYS_EFFECT] = 0;
 
-    mIsTracking = -1;
+    mIsTracking = 0;
 }
 
-JNIEXPORT int JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onEffectItemSelected(JNIEnv *env, jobject instance,
-                                                                    jobject assetManager,
-                                                                    jstring effectItemName_) {
-    const char *effectItemName = (*env)->GetStringUTFChars(env, effectItemName_, 0);
-    mEffectName = (char *) effectItemName;
-    return createEffect(env, assetManager, mEffectName);
+void onFilterLevelSelected(float progress) {
+    mFaceBeautyFilterLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onFilterSelected(JNIEnv *env, jobject instance,
-                                                                jstring filterName_) {
-    const char *filterName = (*env)->GetStringUTFChars(env, filterName_, 0);
-    mFilterName = (char *) filterName;
+void onFilterSelected(char *filterName) {
+    mFilterName = filterName;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onBlurLevelSelected(JNIEnv *env, jobject instance,
-                                                                   jint level) {
-    switch (level) {
-        case 0:
-            mFacebeautyBlurLevel = 0;
-            break;
-        case 1:
-            mFacebeautyBlurLevel = 1.0f;
-            break;
-        case 2:
-            mFacebeautyBlurLevel = 2.0f;
-            break;
-        case 3:
-            mFacebeautyBlurLevel = 3.0f;
-            break;
-        case 4:
-            mFacebeautyBlurLevel = 4.0f;
-            break;
-        case 5:
-            mFacebeautyBlurLevel = 5.0f;
-            break;
-        case 6:
-            mFacebeautyBlurLevel = 6.0f;
-            break;
-        default:
-            break;
-    }
+void onALLBlurLevelSelected(float isAll) {
+    mFaceBeautyALLBlurLevel = isAll;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onColorLevelSelected(JNIEnv *env, jobject instance,
-                                                                    jint progress, jint max) {
-    mFacebeautyColorLevel = 1.0f * progress / max;
+void onBeautySkinTypeSelected(float skinType) {
+    mFaceBeautyType = skinType;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onCheekThinSelected(JNIEnv *env, jobject instance,
-                                                                   jint progress, jint max) {
-    mFacebeautyCheeckThin = 1.0f * progress / max;
+void onBlurLevelSelected(float level) {
+    mFaceBeautyBlurLevel = level;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onEnlargeEyeSelected(JNIEnv *env, jobject instance,
-                                                                    jint progress, jint max) {
-    mFacebeautyEnlargeEye = 1.0f * progress / max;
+void onColorLevelSelected(float progress) {
+    mFaceBeautyColorLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onFaceShapeSelected(JNIEnv *env, jobject instance,
-                                                                   jint faceShape) {
-    mFaceShape = faceShape;
+void onRedLevelSelected(float progress) {
+    mFaceBeautyRedLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onFaceShapeLevelSelected(JNIEnv *env,
-                                                                        jobject instance,
-                                                                        jint progress, jint max) {
-    mFaceShapeLevel = (1.0f * progress) / max;
+void onBrightEyesSelected(float progress) {
+    mBrightEyesLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
 }
 
-JNIEXPORT jobject JNICALL
-Java_com_faceunity_fulivenativedemo_FURenderer_onRedLevelSelected(JNIEnv *env, jobject instance,
-                                                                  jint progress, jint max) {
-    mFacebeautyRedLevel = 1.0f * progress / max;
+void onBeautyTeethSelected(float progress) {
+    mBeautyTeethLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onFaceShapeSelected(float faceShape) {
+    mFaceBeautyFaceShape = faceShape;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onEnlargeEyeSelected(float progress) {
+    mFaceBeautyEnlargeEye = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onCheekThinSelected(float progress) {
+    mFaceBeautyCheekThin = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onChinLevelSelected(float progress) {
+    mChinLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onForeheadLevelSelected(float progress) {
+    mForeheadLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onThinNoseLevelSelected(float progress) {
+    mThinNoseLevel = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onMouthShapeSelected(float progress) {
+    mMouthShape = progress;
+    isNeedUpdateFaceBeauty = 1;
+}
+
+void onMusicFilterTime(long time) {
+    fuAndroidNativeItemSetParamd(itemsArray[ITEM_ARRAYS_EFFECT], "music_time", time);
 }

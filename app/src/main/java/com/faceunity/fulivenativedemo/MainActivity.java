@@ -16,9 +16,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.Toast;
+
+import com.faceunity.beautycontrolview.BeautyControlView;
+import com.faceunity.beautycontrolview.entity.Effect;
+import com.faceunity.beautycontrolview.entity.Filter;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -31,18 +37,26 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
 
     private GLSurfaceView mGLSurfaceView;
     private GLRenderer glRenderer;
-    private long glThreadId;
     private SurfaceTexture mSurfaceTexture;
 
-    private FaceunityControlView mFaceunityControlView;
+    private List<Effect> mEffects;
+    private List<Filter> mBeautyFilters;
+    private List<Filter> mFilters;
+
+    private BeautyControlView mFaceunityControlView;
     private ImageView mFaceDetect;
 
     private Camera mCamera;
+    private static final int PREVIEW_BUFFER_COUNT = 3;
+    private byte[][] previewCallbackBuffer;
+    private int mCameraOrientation = 270;
     private int cameraType = Camera.CameraInfo.CAMERA_FACING_FRONT;
     private int cameraWidth = 1280;
     private int cameraHeight = 720;
 
     private byte[] mCameraNV21Byte;
+
+    private boolean isHasPermission = false;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -50,11 +64,8 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         //now i just regard it as CAMERA
         if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "已拥有权限，请再次点击",
-                    Toast.LENGTH_SHORT).show();
+            isHasPermission = true;
         } else {
-            Toast.makeText(this, "you must permit the camera permission!",
-                    Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -64,46 +75,75 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         setContentView(R.layout.activity_main);
 
         mGLSurfaceView = (GLSurfaceView) findViewById(R.id.gl_surface);
-        mFaceunityControlView = (FaceunityControlView) findViewById(R.id.faceunity_control);
+        mFaceunityControlView = (BeautyControlView) findViewById(R.id.faceunity_control);
         mFaceDetect = (ImageView) findViewById(R.id.face_detect);
 
 
         mGLSurfaceView.setEGLContextClientVersion(2);
         glRenderer = new GLRenderer();
         mGLSurfaceView.setRenderer(glRenderer);
-        mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+        mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
         mFURenderer = new FURenderer();
-        mFaceunityControlView.setOnViewEventListener(mFURenderer);
+        mFaceunityControlView.setOnFaceUnityControlListener(mFURenderer);
 
         checkPermission();
+
+        mEffects = EffectEnum.getEffects();
+        mBeautyFilters = FilterEnum.getFiltersByFilterType(Filter.FILTER_TYPE_BEAUTY_FILTER);
+        mFilters = FilterEnum.getFiltersByFilterType(Filter.FILTER_TYPE_FILTER);
+
+        mFaceunityControlView.setEffects(mEffects);
+        mFaceunityControlView.setBeautyFilters(mBeautyFilters);
+        mFaceunityControlView.setFilters(mFilters);
+
+        mGLSurfaceView.onResume();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mGLSurfaceView.onResume();
+        getCamera(cameraType, cameraWidth, cameraHeight);
+        //开启camera
+        startCamera();
+        mFaceunityControlView.onResume();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        releaseCamera();
+        mFaceunityControlView.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        final CountDownLatch count = new CountDownLatch(1);
         mGLSurfaceView.queueEvent(new Runnable() {
             @Override
             public void run() {
-                mFURenderer.onSurfaceDestory();
+                onSurfaceDestroy();
+                count.countDown();
             }
         });
+        try {
+            count.await(1, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         mGLSurfaceView.onPause();
-        releaseCamera();
     }
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
         mCameraNV21Byte = data;
+        mCamera.addCallbackBuffer(data);
+        mGLSurfaceView.requestRender();
     }
 
     public void switchCamera(View view) {
+        if (mCameraNV21Byte == null) return;
         cameraType = (cameraType == Camera.CameraInfo.CAMERA_FACING_FRONT ? Camera.CameraInfo.CAMERA_FACING_BACK : Camera.CameraInfo.CAMERA_FACING_FRONT);
         getCamera(cameraType, cameraWidth, cameraHeight);
         startCamera();
@@ -113,15 +153,11 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
 
         @Override
         public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-            //获取glThreadI
-            glThreadId = Thread.currentThread().getId();
-
-            //初始化camera
-            getCamera(cameraType, cameraWidth, cameraHeight);
+            cameraTextureId = generateCameraTextureId();
             //开启camera
             startCamera();
             //调用相对应的FURenderer的onSurfaceCreated方法
-            mFURenderer.onSurfaceCreated(getAssets());
+            mFURenderer.onSurfaceCreated(MainActivity.this);
         }
 
         @Override
@@ -149,11 +185,27 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
                 return;
             }
 
-            mFURenderer.onDrawFrame(mCameraNV21Byte, getCameraTexture(), cameraWidth, cameraHeight, mtx);
+            mFURenderer.onDrawFrame(mCameraNV21Byte, cameraTextureId, cameraWidth, cameraHeight, mtx);
+
+            mGLSurfaceView.requestRender();
         }
     }
 
+    public void onSurfaceDestroy() {
+        if (mSurfaceTexture != null) {
+            mSurfaceTexture.release();
+        }
+        if (cameraTextureId > 0) {
+            GLES20.glDeleteTextures(1, new int[]{cameraTextureId}, 0);
+            cameraTextureId = 0;
+            logErrorGL("Failed to release surface texture");
+        }
+        mFURenderer.onSurfaceDestroy();
+    }
+
     private void getCamera(int cameraType, int desiredWidth, int desiredHeight) {
+        if (!isHasPermission) return;
+
         if (mCamera != null) {
             releaseCamera();
         }
@@ -169,14 +221,13 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
                 mCamera = Camera.open(i);
             }
         }
+        mCameraOrientation = CameraUtils.getCameraOrientation(cameraId);
 
         CameraUtils.setCameraDisplayOrientation(this, cameraId, mCamera);
 
         Camera.Parameters parameters = mCamera.getParameters();
 
         CameraUtils.setFocusModes(parameters);
-
-        CameraUtils.chooseFramerate(parameters, 30);
 
         int[] size = CameraUtils.choosePreviewSize(parameters, desiredWidth, desiredHeight);
         cameraWidth = size[0];
@@ -194,29 +245,28 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
     }
 
     private void startCamera() {
-        if (Thread.currentThread().getId() == glThreadId) {
-            mFURenderer.switchCamera(cameraType);
-            releaseCameraTexture();
-            mSurfaceTexture = new SurfaceTexture(getCameraTexture());
+        if (mCamera == null) return;
+        if (cameraTextureId > 0) {
+            mFURenderer.switchCamera(cameraType, mCameraOrientation);
+            mSurfaceTexture = new SurfaceTexture(cameraTextureId);
             try {
-                mCamera.setPreviewCallback(this);
+                if (previewCallbackBuffer == null) {
+                    previewCallbackBuffer = new byte[PREVIEW_BUFFER_COUNT][cameraWidth * cameraHeight * 3 / 2];
+                }
+                mCamera.setPreviewCallbackWithBuffer(this);
+                for (int i = 0; i < PREVIEW_BUFFER_COUNT; i++)
+                    mCamera.addCallbackBuffer(previewCallbackBuffer[i]);
                 mCamera.setPreviewTexture(mSurfaceTexture);
                 mCamera.startPreview();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        } else {
-            mGLSurfaceView.queueEvent(new Runnable() {
-                @Override
-                public void run() {
-                    startCamera();
-                }
-            });
         }
     }
 
     private void releaseCamera() {
         if (mCamera != null) {
+            mCameraNV21Byte = null;
             mCamera.stopPreview();
             mCamera.setPreviewCallback(null);
             try {
@@ -249,35 +299,23 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
                             Manifest.permission.RECORD_AUDIO}, 0);
         } else {
             Log.e(TAG, "has permission or is Meizu");
+            isHasPermission = true;
         }
     }
 
-    private int cameraTexture[];
+    private int cameraTextureId;
 
-    public int getCameraTexture() {
-        if (cameraTexture != null) return cameraTexture[0];
-        if (!generateCameraTexture()) logErrorGL("Camera texture generation failed");
-        return cameraTexture[0];
-    }
-
-    private boolean generateCameraTexture() {
-        cameraTexture = new int[1];
+    private int generateCameraTextureId() {
+        int[] cameraTexture = new int[1];
         GLES20.glGenTextures(1, cameraTexture, 0);
-        if (cameraTexture[0] <= 0) return false;
+        if (cameraTexture[0] <= 0) return 0;
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTexture[0]);
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
         logErrorGL("Failed to generate camera texture");
-        return true;
-    }
-
-    public void releaseCameraTexture() {
-        if (cameraTexture == null) return;
-        GLES20.glDeleteTextures(1, cameraTexture, 0);
-        logErrorGL("Failed to release surface texture");
-        cameraTexture = null;
+        return cameraTexture[0];
     }
 
     private static void logErrorGL(String log) {

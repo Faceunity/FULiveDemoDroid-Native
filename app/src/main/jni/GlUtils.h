@@ -13,4 +13,6 @@ void createProgram();
 
 void drawFrame(int textureId, float texMatrix[]);
 
+void releaseProgram();
+
 #endif //FULIVENATIVEDEMO_GLUTILS_H

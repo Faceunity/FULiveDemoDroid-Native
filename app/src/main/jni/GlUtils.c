@@ -147,3 +147,9 @@ void drawFrame(int textureId, float texMatrix[]) {
 
     checkGlError("draw end");
 }
+
+
+void releaseProgram() {
+    glDeleteProgram(mProgramHandle);
+    mProgramHandle = -1;
+}

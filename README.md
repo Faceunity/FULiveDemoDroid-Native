@@ -59,7 +59,7 @@ FULiveNativeDemoDroid 是集成了 Faceunity 面部跟踪、美颜、Animoji、�
   - 1、拨打电话 **0571-89774660**
   - 2、发送邮件至 **marketing@faceunity.com** 进行咨询。
 
-android端发放的证书为authpack.h文件，如果您已经获取到鉴权证书，将证书文件覆盖工程中的authpack.h文件即可。根据应用需求，鉴权数据也可以在运行时提供(如网络下载)，不过要注意证书泄露风险，防止证书被滥用。
+android端发放的证书为authpack.c文件，如果您已经获取到鉴权证书，将证书文件覆盖工程中com.faceunity.fulivedemo包下的authpack.c文件即可。根据应用需求，鉴权数据也可以在运行时提供(如网络下载)，不过要注意证书泄露风险，防止证书被滥用。
 
 #### 初始化SDK
 
@@ -1252,10 +1252,15 @@ openssl ca -config ca.conf -gencrl -keyfile CERT_NAME.key -cert CERT_NAME.crt -o
 #### - 终端用户证书
 **适用对象**：直接的终端证书使用者。比如，直接客户或个人等。
 
-终端用户由我司或者其他发证机构颁发证书，对于Android平台，出于Android平台易于逆向工程的考虑，需要通过我司的证书工具生成一个`authpack.h`文件交给用户。该类含有一个静态方法，返回内容是加密之后的证书数据，类型为byte数组，形式如下：
+终端用户由我司或者其他发证机构颁发证书，对于Android平台，出于Android平台易于逆向工程的考虑，需要通过我司的证书工具生成一个`authpack.c`文件交给用户。该类含有一个静态方法，返回内容是加密之后的证书数据，类型为byte数组，形式如下：
 
 ```
-static char g_auth_package[]={ ... }
+public class authpack {
+  ...
+  public static  A() {
+    ...
+  }
+}
 ```
 
 用户在库环境初始化时，需要提供该数组进行鉴权，具体参考 fuSetup 接口。没有证书、证书失效、网络连接失败等情况下，会造成鉴权失败，在控制台或者Android平台的log里面打出 "not authenticated" 信息，并在运行一段时间后停止渲染道具。

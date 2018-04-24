@@ -13,9 +13,11 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.faceunity.beautycontrolview.BeautyControlView;
 import com.faceunity.beautycontrolview.entity.Effect;
@@ -45,8 +47,10 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
 
     private BeautyControlView mFaceunityControlView;
     private ImageView mFaceDetect;
+    private TextView mFaceDescription;
 
     private Camera mCamera;
+    private int cameraTextureId;
     private static final int PREVIEW_BUFFER_COUNT = 3;
     private byte[][] previewCallbackBuffer;
     private int mCameraOrientation = 270;
@@ -74,10 +78,12 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        checkPermission();
+
         mGLSurfaceView = (GLSurfaceView) findViewById(R.id.gl_surface);
         mFaceunityControlView = (BeautyControlView) findViewById(R.id.faceunity_control);
         mFaceDetect = (ImageView) findViewById(R.id.face_detect);
-
+        mFaceDescription = findViewById(R.id.face_description);
 
         mGLSurfaceView.setEGLContextClientVersion(2);
         glRenderer = new GLRenderer();
@@ -87,8 +93,6 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         mFURenderer = new FURenderer();
         mFaceunityControlView.setOnFaceUnityControlListener(mFURenderer);
 
-        checkPermission();
-
         mEffects = EffectEnum.getEffects();
         mBeautyFilters = FilterEnum.getFiltersByFilterType(Filter.FILTER_TYPE_BEAUTY_FILTER);
         mFilters = FilterEnum.getFiltersByFilterType(Filter.FILTER_TYPE_FILTER);
@@ -96,6 +100,34 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         mFaceunityControlView.setEffects(mEffects);
         mFaceunityControlView.setBeautyFilters(mBeautyFilters);
         mFaceunityControlView.setFilters(mFilters);
+        mFaceunityControlView.setOnDescriptionShowListener(new BeautyControlView.OnDescriptionShowListener() {
+            @Override
+            public void onDescriptionShowListener(String str) {
+                showDescription(str, 1500);
+            }
+        });
+        mFaceunityControlView.setOnEffectSelectedListener(new BeautyControlView.OnEffectSelectedListener() {
+            @Override
+            public void onEffectSelected(Effect effectItemName) {
+                showDescription(effectItemName.description(), 1500);
+            }
+        });
+
+        mFURenderer.setOnTrackingStatusChangedListener(new FURenderer.OnTrackingStatusChangedListener() {
+            @Override
+            public void onTrackingStatusChanged(final int status) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (status > 0) {
+                            mFaceDetect.setVisibility(View.INVISIBLE);
+                        } else {
+                            mFaceDetect.setVisibility(View.VISIBLE);
+                        }
+                    }
+                });
+            }
+        });
 
         mGLSurfaceView.onResume();
     }
@@ -153,7 +185,7 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
 
         @Override
         public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-            cameraTextureId = generateCameraTextureId();
+            cameraTextureId = GlUtil.createTextureObject(GLES11Ext.GL_TEXTURE_EXTERNAL_OES);
             //开启camera
             startCamera();
             //调用相对应的FURenderer的onSurfaceCreated方法
@@ -198,7 +230,6 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         if (cameraTextureId > 0) {
             GLES20.glDeleteTextures(1, new int[]{cameraTextureId}, 0);
             cameraTextureId = 0;
-            logErrorGL("Failed to release surface texture");
         }
         mFURenderer.onSurfaceDestroy();
     }
@@ -233,6 +264,8 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         cameraWidth = size[0];
         cameraHeight = size[1];
 
+        mCamera.setParameters(parameters);
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -240,8 +273,6 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
                 aspectFrameLayout.setAspectRatio(1.0f * cameraHeight / cameraWidth);
             }
         });
-
-        mCamera.setParameters(parameters);
     }
 
     private void startCamera() {
@@ -303,23 +334,21 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         }
     }
 
-    private int cameraTextureId;
+    private Runnable effectDescriptionHide = new Runnable() {
+        @Override
+        public void run() {
+            mFaceDescription.setText("");
+            mFaceDescription.setVisibility(View.INVISIBLE);
+        }
+    };
 
-    private int generateCameraTextureId() {
-        int[] cameraTexture = new int[1];
-        GLES20.glGenTextures(1, cameraTexture, 0);
-        if (cameraTexture[0] <= 0) return 0;
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTexture[0]);
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-        logErrorGL("Failed to generate camera texture");
-        return cameraTexture[0];
-    }
-
-    private static void logErrorGL(String log) {
-        int error = GLES20.glGetError();
-        if (error != 0) Log.d("Unity", "NatCam Error: " + log + " with error " + error);
+    protected void showDescription(String str, int time) {
+        if (TextUtils.isEmpty(str)) {
+            return;
+        }
+        mFaceDescription.removeCallbacks(effectDescriptionHide);
+        mFaceDescription.setVisibility(View.VISIBLE);
+        mFaceDescription.setText(str);
+        mFaceDescription.postDelayed(effectDescriptionHide, time);
     }
 }

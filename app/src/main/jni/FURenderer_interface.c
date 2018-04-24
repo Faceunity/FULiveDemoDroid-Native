@@ -58,6 +58,39 @@ Java_com_faceunity_fulivenativedemo_FURenderer_onSurfaceChanged(JNIEnv *env, job
     onSurfaceChanged(0, 0, wight, height);
 }
 
+void callJavaIsTrackingListener(JNIEnv *env, jobject instance, int status) {
+    jclass clazzListener = (*env)->FindClass(env,
+                                             "com/faceunity/fulivenativedemo/FURenderer$OnTrackingStatusChangedListener");
+    if (clazzListener == 0) {
+        LOGE("FindClass Listener error");
+        return;
+    }
+    jmethodID method = (*env)->GetMethodID(env, clazzListener, "onTrackingStatusChanged", "(I)V");
+    if (method == 0) {
+        LOGE("GetMethodID onTrackingStatusChanged error");
+        return;
+    }
+    jclass clazzFURenderer = (*env)->FindClass(env, "com/faceunity/fulivenativedemo/FURenderer");
+    if (clazzFURenderer == 0) {
+        LOGE("FindClass FURenderer error");
+        return;
+    }
+    jfieldID fieldID = (*env)->GetFieldID(env, clazzFURenderer, "mOnTrackingStatusChangedListener",
+                                          "Lcom/faceunity/fulivenativedemo/FURenderer$OnTrackingStatusChangedListener;");
+    if (fieldID == 0) {
+        LOGE("GetFieldID error");
+        return;
+    }
+    jobject object = (*env)->GetObjectField(env, instance, fieldID);
+    if (object == 0) {
+        LOGE("GetObjectField error");
+        return;
+    }
+    (*env)->CallVoidMethod(env, object, method, status);
+}
+
+int mIsTracking = -1;
+
 JNIEXPORT void JNICALL
 Java_com_faceunity_fulivenativedemo_FURenderer_onDrawFrame(JNIEnv *env, jobject instance,
                                                            jbyteArray img_, jint textureId,
@@ -67,7 +100,11 @@ Java_com_faceunity_fulivenativedemo_FURenderer_onDrawFrame(JNIEnv *env, jobject 
     jbyte *img = (*env)->GetByteArrayElements(env, img_, NULL);
     jfloat *mtx = (*env)->GetFloatArrayElements(env, mtx_, NULL);
 
-    onDrawFrame(img, textureId, width, height, mtx);
+    int isTracking = onDrawFrame(img, textureId, width, height, mtx);
+    if (mIsTracking != isTracking) {
+        mIsTracking = isTracking;
+        callJavaIsTrackingListener(env, instance, mIsTracking);
+    }
 
     (*env)->ReleaseByteArrayElements(env, img_, img, 0);
     (*env)->ReleaseFloatArrayElements(env, mtx_, mtx, 0);

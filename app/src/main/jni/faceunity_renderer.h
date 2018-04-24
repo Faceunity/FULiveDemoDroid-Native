@@ -14,7 +14,7 @@ void onSurfaceCreated(void *beautification, int beautificationSize, void *fxaa, 
 
 void onSurfaceChanged(int x, int y, int width, int height);
 
-void onDrawFrame(void *img, int textureId, int width, int height, float *mtx);
+int onDrawFrame(void *img, int textureId, int width, int height, float *mtx);
 
 void onSurfaceDestroy();
 

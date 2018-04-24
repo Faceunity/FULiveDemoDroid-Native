@@ -7,7 +7,7 @@ include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := faceunity-native
-LOCAL_SRC_FILES := FURenderer_interface.c faceunity_renderer.c android_util.c android_util.h GlUtils.c GlUtils.h android_native_interface.h
+LOCAL_SRC_FILES := FURenderer_interface.c faceunity_renderer.c faceunity_renderer.h android_util.c android_util.h GlUtils.c GlUtils.h android_native_interface.h
 LOCAL_SHARED_LIBRARIES := nama
 LOCAL_LDLIBS := -llog -landroid -lGLESv2
 include $(BUILD_SHARED_LIBRARY)

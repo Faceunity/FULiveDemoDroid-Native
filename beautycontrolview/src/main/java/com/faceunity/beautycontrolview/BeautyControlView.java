@@ -626,6 +626,9 @@ public class BeautyControlView extends FrameLayout {
                     if (mOnFaceUnityControlListener != null) {
                         mOnFaceUnityControlListener.onEffectSelected(click);
                     }
+                    if (mOnEffectSelectedListener != null) {
+                        mOnEffectSelectedListener.onEffectSelected(click);
+                    }
                     playMusic(click);
                     notifyDataSetChanged();
                 }
@@ -889,4 +892,19 @@ public class BeautyControlView extends FrameLayout {
         playMusic(mEffects.get(mEffectPositionSelect));
     }
 
+    public interface OnEffectSelectedListener {
+
+        /**
+         * 道具贴纸选择
+         *
+         * @param effectItemName 道具贴纸文件名
+         */
+        void onEffectSelected(Effect effectItemName);
+    }
+
+    private OnEffectSelectedListener mOnEffectSelectedListener;
+
+    public void setOnEffectSelectedListener(OnEffectSelectedListener onEffectSelectedListener) {
+        mOnEffectSelectedListener = onEffectSelectedListener;
+    }
 }

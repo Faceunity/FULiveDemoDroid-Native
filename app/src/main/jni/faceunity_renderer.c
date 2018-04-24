@@ -40,10 +40,11 @@ static int ITEM_ARRAYS_EFFECT = 1;
 static int ITEM_ARRAYS_ANIMOJI_3D = 2;
 volatile int itemsArray[] = {0, 0, 0};
 
+volatile int itemsEffectArray[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 int mCameraType = 1;
 int mInputImageOrientation = 270;
 
-int mIsTracking = -1;
 int systemErrorStatus = 0;//success number
 
 void updateEffectItemParams(int itemHandle) {
@@ -66,18 +67,20 @@ void updateEffectItemParams(int itemHandle) {
 
 void createEffect(char *name, void *effectData, int effectSize) {
 
+    if (itemsArray[ITEM_ARRAYS_EFFECT] > 0)
+        for (int i = 0; i < sizeof(itemsEffectArray); i++) {
+            if (itemsEffectArray[i] == 0) {
+                itemsEffectArray[i] = itemsArray[ITEM_ARRAYS_EFFECT];
+                break;
+            }
+        }
+
     if (strncmp("none", name, 4) == 0) {
-        if (itemsArray[ITEM_ARRAYS_EFFECT] > 0)
-            fuAndroidNativeDestroyItem(itemsArray[ITEM_ARRAYS_EFFECT]);
         itemsArray[ITEM_ARRAYS_EFFECT] = 0;
     } else {
-        int temp = itemsArray[ITEM_ARRAYS_EFFECT];
         itemsArray[ITEM_ARRAYS_EFFECT] = fuAndroidNativeCreateItemFromPackage(effectData,
                                                                               effectSize);
         updateEffectItemParams(itemsArray[ITEM_ARRAYS_EFFECT]);
-        if (temp > 0) {
-            fuAndroidNativeDestroyItem(temp);
-        }
     }
 }
 
@@ -107,18 +110,12 @@ void onSurfaceChanged(int x, int y, int width, int height) {
     glViewport(x, y, width, height);
 }
 
-void onDrawFrame(void *img, int textureId, int width, int height, float *mtx) {
+int onDrawFrame(void *img, int textureId, int width, int height, float *mtx) {
 
     int systemError = fuAndroidNativeGetSystemError();
     if (systemError != systemErrorStatus) {
         systemErrorStatus = systemError;
         LOGE("system error %d %s", systemError, fuAndroidNativeGetSystemErrorString(systemError));
-    }
-
-    int isTracking = fuAndroidNativeIsTracking();
-    if (mIsTracking != isTracking) {
-        LOGE("isTracking %d ", isTracking);
-        mIsTracking = isTracking;
     }
 
     //修改美颜参数
@@ -182,6 +179,13 @@ void onDrawFrame(void *img, int textureId, int width, int height, float *mtx) {
         isNeedUpdateFaceBeauty = 0;
     }
 
+    for (int i = 0; i < sizeof(itemsEffectArray) / sizeof(int); i++) {
+        if (itemsEffectArray[i] > 0) {
+            fuAndroidNativeDestroyItem(itemsEffectArray[i]);
+            itemsEffectArray[i] = 0;
+        }
+    }
+
     int flags = FU_ADM_FLAG_EXTERNAL_OES_TEXTURE;
     if (mCameraType == 0) {
         flags |= ANDROID_NATIVE_NAMA_RENDER_OPTION_FLIP_X;
@@ -193,6 +197,8 @@ void onDrawFrame(void *img, int textureId, int width, int height, float *mtx) {
 
     //把处理完的纹理绘制到屏幕上
     drawFrame(texture, mtx);
+
+    return fuAndroidNativeIsTracking();
 }
 
 void onSurfaceDestroy() {
@@ -239,7 +245,9 @@ void resetStatus() {
 
     itemsArray[ITEM_ARRAYS_ANIMOJI_3D] = itemsArray[ITEM_ARRAYS_FACE_BEAUTY_INDEX] = itemsArray[ITEM_ARRAYS_EFFECT] = 0;
 
-    mIsTracking = 0;
+    for (int i = 0; i < sizeof(itemsEffectArray) / sizeof(int); i++) {
+        itemsEffectArray[i] = 0;
+    }
 }
 
 void onFilterLevelSelected(float progress) {

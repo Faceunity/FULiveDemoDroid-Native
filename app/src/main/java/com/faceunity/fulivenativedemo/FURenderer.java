@@ -2,6 +2,7 @@ package com.faceunity.fulivenativedemo;
 
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.util.Log;
 
 import com.faceunity.beautycontrolview.OnFaceUnityControlListener;
 import com.faceunity.beautycontrolview.entity.Effect;
@@ -138,4 +139,13 @@ public class FURenderer implements OnFaceUnityControlListener {
     @Override
     public native void onMouthShapeSelected(float progress);
 
+    public interface OnTrackingStatusChangedListener {
+        void onTrackingStatusChanged(int status);
+    }
+
+    private OnTrackingStatusChangedListener mOnTrackingStatusChangedListener;
+
+    public void setOnTrackingStatusChangedListener(OnTrackingStatusChangedListener onTrackingStatusChangedListener) {
+        mOnTrackingStatusChangedListener = onTrackingStatusChangedListener;
+    }
 }

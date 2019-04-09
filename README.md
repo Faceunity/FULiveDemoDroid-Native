@@ -18,6 +18,11 @@ FULiveNativeDemoDroid 是集成了 Faceunity 面部跟踪、美颜、Animoji、�
 - 修复mebedtls符号冲突问题。
 - 注：美发、Animoji道具支持FUEditor v5.6.0以上制作版本，其余道具在任意SDK皆可兼容
 
+更新文档
+- [美颜道具参数说明_完整版](docs/美颜道具参数说明_完整版.pdf)
+- [美妆bundle参数说明](docs/美妆bundle参数说明.pdf)
+- [质感美颜参数说明](docs/质感美颜参数说明.pdf)
+
 具体更新内容可以到[这里](https://github.com/Faceunity/FULiveDemoDroid/tree/dev)查看详细文档。
 
 ## 文件说明

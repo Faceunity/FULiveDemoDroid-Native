@@ -5,8 +5,7 @@
 #ifndef FULIVENATIVEDEMO_FACEUNITY_RENDERER_H
 #define FULIVENATIVEDEMO_FACEUNITY_RENDERER_H
 
-void initFURenderer(void *auth, int authSize, void *v3, int v3Size, void *anim, int animSize,
-                    void *arData, int arDataSize);
+void initFURenderer(void *auth, int authSize, void *v3, int v3Size);
 
 void createEffect(char *name, void *effectData, int effectSize);
 

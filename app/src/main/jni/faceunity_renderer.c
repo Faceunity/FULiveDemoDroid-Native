@@ -84,12 +84,8 @@ void createEffect(char *name, void *effectData, int effectSize) {
     }
 }
 
-void initFURenderer(void *auth, int authSize, void *v3, int v3Size, void *anim, int animSize,
-                    void *arData, int arDataSize) {
-
+void initFURenderer(void *auth, int authSize, void *v3, int v3Size) {
     fuAndroidNativeSetup(v3, v3Size, auth, authSize);
-    fuLoadAnimModel(anim, animSize);
-    fuLoadExtendedARData(arData, arDataSize);
 }
 
 void onSurfaceCreated(void *beautification, int beautificationSize, void *fxaa, int fxaaSize) {
@@ -193,7 +189,7 @@ int onDrawFrame(void *img, int textureId, int width, int height, float *mtx) {
     int texture = fuAndroidNativeDualInputToTexture(img, (GLuint) textureId, flags, width, height,
                                                     frame_id++, itemsArray,
                                                     sizeof(itemsArray) / sizeof(int), NULL, width,
-                                                    height, NULL, 0);
+                                                    height, NULL, 0, 0, 0);
 
     //把处理完的纹理绘制到屏幕上
     drawFrame(texture, mtx);

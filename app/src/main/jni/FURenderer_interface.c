@@ -14,22 +14,9 @@ Java_com_faceunity_fulivenativedemo_FURenderer_initFURenderer(JNIEnv *env, jclas
     int v3Size;
     readAssets(env, manager, "v3.bundle", &v3, &v3Size);
 
-    //读取assets中的anim_model.bundle数据
-    void *anim;
-    int animSize;
-    readAssets(env, manager, "anim_model.bundle", &anim, &animSize);
-
-    //读取assets中的ardata_ex.bundle数据
-    void *arData;
-    int arDataSize;
-    readAssets(env, manager, "ardata_ex.bundle", &arData, &arDataSize);
-
-    initFURenderer(g_auth_package, sizeof(g_auth_package), v3, v3Size, anim, animSize, arData,
-                   arDataSize);
+    initFURenderer(g_auth_package, sizeof(g_auth_package), v3, v3Size);
 
     free(v3);
-    free(anim);
-    free(arData);
 }
 
 JNIEXPORT void JNICALL

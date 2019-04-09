@@ -4,31 +4,26 @@ FULiveNativeDemoDroid 是集成了 Faceunity 面部跟踪、美颜、Animoji、�
 
 注：demo第一次运行会报一个缺少返回语句的error，这是因为在本demo中缺少我司颁发的证书。如果您已拥有我司颁发的证书，将证书替换到工程中重新运行即可。如您还没有我司颁发的证书，可以查看[这里][1]获取证书
 
-## SDK v5.0 更新
+## SDK v6.0.0 更新
 
 更新内容
 
-- 新增高级美颜功能
-- 新增精细脸型调整功能
-- 新增3D绘制抗锯齿功能
-- 新增照片驱动功能
-- 新增人脸夸张变形功能
-- 新增音乐节奏滤镜
-- 新增被动表情校准模式
-- 优化手势识别
-- 人脸跟踪底层性能进一步优化
-- 性能优化
-- 其他累积问题修复、接口调整
+- 优化人脸检测，提高检测率，提高性能。
+- 新增质感美颜功能（注：道具支持SDK v6.0.0以上版本）。
+- 人脸融合(海报换脸)效果优化（注：道具支持 SDK v6.0.0以上版本）。
+- 背景分割分割精度优化（注：此版本背景分割、手势识别道具只支持 SDK v6.0.0以上版本）。
+- 舌头跟踪trackface逻辑支持，Getfaceinfo支持。
+- 新增Avatar捏脸功能，需FUEditor 6.0.0以上版本。
+- 美颜滤镜优化（注：原有滤镜整合，重命名归类及效果新增， 道具支持SDK v5.5.0以上版本）。
+- 修复mebedtls符号冲突问题。
+- 注：美发、Animoji道具支持FUEditor v5.6.0以上制作版本，其余道具在任意SDK皆可兼容
 
-具体更新内容可以到[这里](https://github.com/Faceunity/FULiveDemoDroid/blob/dev/docs/FUNama%20SDK%20v5.0%20%E6%9B%B4%E6%96%B0%E6%96%87%E6%A1%A3.md)查看详细文档。
+更新文档
+- [美颜道具参数说明_完整版](docs/美颜道具参数说明_完整版.pdf)
+- [美妆bundle参数说明](docs/美妆bundle参数说明.pdf)
+- [质感美颜参数说明](docs/质感美颜参数说明.pdf)
 
-## SDK集成
-
-### 通过 github 下载集成
-
-含有深度学习的版本：[Faceunity-Android-v5.0-dev.zip](https://github.com/Faceunity/FULiveDemoDroid/releases/download/v5.0-dev-fix/Faceunity-Android-v5.0-dev.zip)
-
-不含深度学习的版本（lite版）：[Faceunity-Android-v5.0-dev-lite.zip](https://github.com/Faceunity/FULiveDemoDroid/releases/download/v5.0-dev-fix/Faceunity-Android-v5.0-dev-lite.zip)
+具体更新内容可以到[这里](https://github.com/Faceunity/FULiveDemoDroid/tree/dev)查看详细文档。
 
 ## 文件说明
 

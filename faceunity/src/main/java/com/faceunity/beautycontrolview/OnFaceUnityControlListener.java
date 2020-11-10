@@ -1,26 +1,19 @@
 package com.faceunity.beautycontrolview;
 
 
-import com.faceunity.beautycontrolview.entity.Effect;
-import com.faceunity.beautycontrolview.entity.Filter;
+import com.faceunity.beautycontrolview.entity.Sticker;
 
 /**
  * FURenderer与界面之间的交互接口
  */
 public interface OnFaceUnityControlListener {
-    /**
-     * 音乐滤镜时间
-     *
-     * @param time
-     */
-    void onMusicFilterTime(long time);
 
     /**
-     * 道具贴纸选择
+     * 贴纸选择
      *
-     * @param effectItemName 道具贴纸文件名
+     * @param sticker 文件路径
      */
-    void onEffectSelected(Effect effectItemName);
+    void onStickerSelected(Sticker sticker);
 
     /**
      * 滤镜强度
@@ -32,16 +25,16 @@ public interface OnFaceUnityControlListener {
     /**
      * 滤镜选择
      *
-     * @param filterName 滤镜名称
+     * @param name 滤镜名称
      */
-    void onFilterSelected(Filter filterName);
+    void onFilterNameSelected(String name);
 
     /**
      * 精准磨皮
      *
      * @param isAll 是否开启精准磨皮（0关闭 1开启）
      */
-    void onALLBlurLevelSelected(float isAll);
+    void onAllBlurLevelSelected(float isAll);
 
     /**
      * 美肤类型
@@ -113,11 +106,8 @@ public interface OnFaceUnityControlListener {
      */
     void onThinNoseLevelSelected(float progress);
 
-
     /**
      * 嘴形
      */
     void onMouthShapeSelected(float progress);
-
-
 }

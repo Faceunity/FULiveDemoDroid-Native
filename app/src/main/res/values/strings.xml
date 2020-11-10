@@ -1,3 +1,9 @@
 <resources>
-    <string name="app_name">FuLiveNativeDemo</string>
+    <string name="app_name">FuLiveNative</string>
+
+    <string name="toast_permission">请授予必要的权限！</string>
+    <string name="camera_dialog_title">警告</string>
+    <string name="camera_dialog_message">相机权限被禁用或者相机正在被占用！</string>
+    <string name="camera_dialog_open">重试</string>
+    <string name="camera_dialog_back">退出</string>
 </resources>

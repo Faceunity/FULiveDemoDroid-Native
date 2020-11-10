@@ -2,11 +2,6 @@ package com.faceunity.beautycontrolview;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.content.res.AssetFileDescriptor;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.os.Handler;
-import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -20,11 +15,10 @@ import android.widget.ImageView;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
-import com.faceunity.beautycontrolview.entity.Effect;
 import com.faceunity.beautycontrolview.entity.Filter;
+import com.faceunity.beautycontrolview.entity.Sticker;
 import com.faceunity.beautycontrolview.seekbar.DiscreteSeekBar;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -41,7 +35,7 @@ public class BeautyControlView extends FrameLayout {
 
     public static final float FINAL_CHANE = 1000;
 
-    private Context mContext;
+    private final Context mContext;
 
     private OnFaceUnityControlListener mOnFaceUnityControlListener;
 
@@ -64,12 +58,10 @@ public class BeautyControlView extends FrameLayout {
     private BeautyBox mMouthShapeBox;
 
     private RecyclerView mEffectRecyclerView;
-    private EffectRecyclerAdapter mEffectRecyclerAdapter;
-    private List<Effect> mEffects;
+    private List<Sticker> mEffects;
 
     private RecyclerView mFilterRecyclerView;
     private FilterRecyclerAdapter mFilterRecyclerAdapter;
-    private List<Filter> mBeautyFilters;
     private List<Filter> mFilters;
 
     private FrameLayout mBeautySeekBarLayout;
@@ -78,19 +70,19 @@ public class BeautyControlView extends FrameLayout {
     private RadioGroup mFaceShapeRadioGroup;
 
     private static final String FaceBeautyFilterLevel = "FaceBeautyFilterLevel_";
-    private Map<String, Float> mFilterLevelIntegerMap = new HashMap<>();
+    private final Map<String, Float> mFilterLevelIntegerMap = new HashMap<>();
 
     private float mFaceBeautyALLBlurLevel = 1.0f;//精准磨皮
     private float mFaceBeautyType = 0.0f;//美肤类型
     private float mFaceBeautyBlurLevel = 0.7f;//磨皮
-    private float mFaceBeautyColorLevel = 0.5f;//美白
-    private float mFaceBeautyRedLevel = 0.5f;//红润
+    private float mFaceBeautyColorLevel = 0.3f;//美白
+    private float mFaceBeautyRedLevel = 0.3f;//红润
     private float mBrightEyesLevel = 1000.7f;//亮眼
     private float mBeautyTeethLevel = 1000.7f;//美牙
 
     private float mFaceBeautyFaceShape = 4.0f;//脸型
     private float mFaceBeautyEnlargeEye = 0.4f;//大眼
-    private float mFaceBeautyCheekThin = 0.4f;//瘦脸
+    private float mFaceBeautyCheekThin = 0.f;//瘦脸
     private float mFaceBeautyEnlargeEye_old = 0.4f;//大眼
     private float mFaceBeautyCheekThin_old = 0.4f;//瘦脸
     private float mChinLevel = 0.3f;//下巴
@@ -385,7 +377,7 @@ public class BeautyControlView extends FrameLayout {
 
         mEffectRecyclerView = (RecyclerView) findViewById(R.id.effect_recycle_view);
         mEffectRecyclerView.setLayoutManager(new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false));
-        mEffectRecyclerView.setAdapter(mEffectRecyclerAdapter = new EffectRecyclerAdapter());
+        mEffectRecyclerView.setAdapter(new EffectRecyclerAdapter());
 
 
         mFilterRecyclerView = (RecyclerView) findViewById(R.id.filter_recycle_view);
@@ -440,7 +432,7 @@ public class BeautyControlView extends FrameLayout {
                     onChangeFaceBeautyLevel(mSkinBeautyBoxGroup.getCheckedBeautyBoxId(), valueF);
                 } else if (mBottomCheckGroup.getCheckedCheckBoxId() == R.id.beauty_radio_face_shape) {
                     onChangeFaceBeautyLevel(mFaceShapeBeautyBoxGroup.getCheckedBeautyBoxId(), valueF);
-                } else if (mBottomCheckGroup.getCheckedCheckBoxId() == R.id.beauty_radio_beauty_filter || mBottomCheckGroup.getCheckedCheckBoxId() == R.id.beauty_radio_filter) {
+                } else if (mBottomCheckGroup.getCheckedCheckBoxId() == R.id.beauty_radio_filter) {
                     mFilterRecyclerAdapter.setFilterLevels(valueF);
                     if (mOnFaceUnityControlListener != null)
                         mOnFaceUnityControlListener.onFilterLevelSelected(valueF);
@@ -497,7 +489,7 @@ public class BeautyControlView extends FrameLayout {
         boolean isClose = value >= 1000;
         if (viewId == R.id.beauty_all_blur_box) {
             if (mOnFaceUnityControlListener != null)
-                mOnFaceUnityControlListener.onALLBlurLevelSelected(value);
+                mOnFaceUnityControlListener.onAllBlurLevelSelected(value);
         } else if (viewId == R.id.beauty_type_box) {
             if (mOnFaceUnityControlListener != null)
                 mOnFaceUnityControlListener.onBeautySkinTypeSelected(value);
@@ -585,20 +577,10 @@ public class BeautyControlView extends FrameLayout {
             mBeautyMidLayout.setVisibility(VISIBLE);
             mFaceShapeSelect.setVisibility(VISIBLE);
             updateTopView(mFaceShapeBeautyBoxGroup.getCheckedBeautyBoxId());
-        } else if (viewId == R.id.beauty_radio_beauty_filter) {
-            mFilterRecyclerAdapter.setFilterType(Filter.FILTER_TYPE_BEAUTY_FILTER);
-            mBeautyMidLayout.setVisibility(VISIBLE);
-            mFilterRecyclerView.setVisibility(VISIBLE);
-            if (mFilterTypeSelect == Filter.FILTER_TYPE_BEAUTY_FILTER) {
-                mFilterRecyclerAdapter.setFilterProgress();
-            }
         } else if (viewId == R.id.beauty_radio_filter) {
-            mFilterRecyclerAdapter.setFilterType(Filter.FILTER_TYPE_FILTER);
             mBeautyMidLayout.setVisibility(VISIBLE);
             mFilterRecyclerView.setVisibility(VISIBLE);
-            if (mFilterTypeSelect == Filter.FILTER_TYPE_FILTER) {
-                mFilterRecyclerAdapter.setFilterProgress();
-            }
+            mFilterRecyclerAdapter.setFilterProgress();
         }
     }
 
@@ -615,7 +597,7 @@ public class BeautyControlView extends FrameLayout {
         }
     }
 
-    private int mEffectPositionSelect = 0;
+    private int mEffectPositionSelect = -1;
 
     class EffectRecyclerAdapter extends RecyclerView.Adapter<EffectRecyclerAdapter.HomeRecyclerHolder> {
 
@@ -626,22 +608,17 @@ public class BeautyControlView extends FrameLayout {
 
         @Override
         public void onBindViewHolder(HomeRecyclerHolder holder, final int position) {
-
-            holder.effectImg.setImageResource(mEffects.get(position).resId());
+            holder.effectImg.setImageResource(mEffects.get(position).getIconId());
             holder.effectImg.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mEffectPositionSelect == position) {
                         return;
                     }
-                    Effect click = mEffects.get(mEffectPositionSelect = position);
+                    Sticker click = mEffects.get(mEffectPositionSelect = position);
                     if (mOnFaceUnityControlListener != null) {
-                        mOnFaceUnityControlListener.onEffectSelected(click);
+                        mOnFaceUnityControlListener.onStickerSelected(click);
                     }
-                    if (mOnEffectSelectedListener != null) {
-                        mOnEffectSelectedListener.onEffectSelected(click);
-                    }
-                    playMusic(click);
                     notifyDataSetChanged();
                 }
             });
@@ -670,7 +647,7 @@ public class BeautyControlView extends FrameLayout {
 
     public float getFaceBeautyFilterLevel(String filterName) {
         Float level = mFilterLevelIntegerMap.get(FaceBeautyFilterLevel + filterName);
-        float l = level == null ? 1.0f : level;
+        float l = level == null ? 0.4f : level;
         setFaceBeautyFilterLevel(filterName, l);
         return l;
     }
@@ -681,12 +658,9 @@ public class BeautyControlView extends FrameLayout {
             mOnFaceUnityControlListener.onFilterLevelSelected(faceBeautyFilterLevel);
     }
 
-    private int mFilterPositionSelect = 0;
-    private int mFilterTypeSelect = Filter.FILTER_TYPE_BEAUTY_FILTER;
 
     class FilterRecyclerAdapter extends RecyclerView.Adapter<FilterRecyclerAdapter.HomeRecyclerHolder> {
-
-        int filterType;
+        private int mFilterPositionSelect = 0;
 
         @Override
         public FilterRecyclerAdapter.HomeRecyclerHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -695,10 +669,10 @@ public class BeautyControlView extends FrameLayout {
 
         @Override
         public void onBindViewHolder(FilterRecyclerAdapter.HomeRecyclerHolder holder, final int position) {
-            final List<Filter> filters = getItems(filterType);
-            holder.filterImg.setBackgroundResource(filters.get(position).resId());
-            holder.filterName.setText(filters.get(position).description());
-            if (mFilterPositionSelect == position && filterType == mFilterTypeSelect) {
+            Filter filter = mFilters.get(position);
+            holder.filterImg.setBackgroundResource(filter.getIconId());
+            holder.filterName.setText(filter.getDescription());
+            if (mFilterPositionSelect == position) {
                 holder.filterImg.setImageResource(R.drawable.control_filter_select);
             } else {
                 holder.filterImg.setImageResource(0);
@@ -707,44 +681,27 @@ public class BeautyControlView extends FrameLayout {
                 @Override
                 public void onClick(View v) {
                     mFilterPositionSelect = position;
-                    mFilterTypeSelect = filterType;
                     setFilterProgress();
                     notifyDataSetChanged();
                     mBeautySeekBarLayout.setVisibility(VISIBLE);
                     changeBottomLayoutAnimator(false);
                     if (mOnFaceUnityControlListener != null)
-                        mOnFaceUnityControlListener.onFilterSelected(filters.get(mFilterPositionSelect));
+                        mOnFaceUnityControlListener.onFilterNameSelected(mFilters.get(mFilterPositionSelect).getName());
                 }
             });
         }
 
         @Override
         public int getItemCount() {
-            return getItems(filterType).size();
+            return mFilters.size();
         }
-
-        public void setFilterType(int filterType) {
-            this.filterType = filterType;
-            notifyDataSetChanged();
-        }
-
 
         public void setFilterLevels(float filterLevels) {
-            setFaceBeautyFilterLevel(getItems(mFilterTypeSelect).get(mFilterPositionSelect).filterName(), filterLevels);
+            setFaceBeautyFilterLevel(mFilters.get(mFilterPositionSelect).getName(), filterLevels);
         }
 
         public void setFilterProgress() {
-            seekToSeekBar(getFaceBeautyFilterLevel(getItems(mFilterTypeSelect).get(mFilterPositionSelect).filterName()));
-        }
-
-        public List<Filter> getItems(int type) {
-            switch (type) {
-                case Filter.FILTER_TYPE_BEAUTY_FILTER:
-                    return mBeautyFilters;
-                case Filter.FILTER_TYPE_FILTER:
-                    return mFilters;
-            }
-            return mFilters;
+            seekToSeekBar(getFaceBeautyFilterLevel(mFilters.get(mFilterPositionSelect).getName()));
         }
 
         class HomeRecyclerHolder extends RecyclerView.ViewHolder {
@@ -818,105 +775,12 @@ public class BeautyControlView extends FrameLayout {
             mOnDescriptionShowListener.onDescriptionShowListener(str);
     }
 
-    public void setEffects(List<Effect> effects) {
+    public void setStickers(List<Sticker> effects) {
         mEffects = effects;
-    }
-
-    public void setBeautyFilters(List<Filter> beautyFilters) {
-        mBeautyFilters = beautyFilters;
     }
 
     public void setFilters(List<Filter> filters) {
         mFilters = filters;
     }
 
-    private MediaPlayer mediaPlayer;
-    private Handler mMusicHandler;
-    private static final int MUSIC_TIME = 50;
-    Runnable mMusicRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mediaPlayer != null && mediaPlayer.isPlaying() && mOnFaceUnityControlListener != null)
-                mOnFaceUnityControlListener.onMusicFilterTime(mediaPlayer.getCurrentPosition());
-
-            mMusicHandler.postDelayed(mMusicRunnable, MUSIC_TIME);
-        }
-    };
-
-    void stopMusic() {
-        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-            mediaPlayer = null;
-            mMusicHandler.removeCallbacks(mMusicRunnable);
-
-        }
-    }
-
-    void playMusic(Effect effect) {
-        stopMusic();
-
-        if (effect.effectType() != Effect.EFFECT_TYPE_MUSIC_FILTER) {
-            return;
-        }
-
-        mediaPlayer = new MediaPlayer();
-        mMusicHandler = new Handler(Looper.getMainLooper());
-
-        /**
-         * mp3
-         */
-        try {
-            AssetFileDescriptor descriptor = mContext.getAssets().openFd("musicfilter/" + effect.bundleName() + ".mp3");
-            mediaPlayer.setDataSource(descriptor.getFileDescriptor(), descriptor.getStartOffset(), descriptor.getLength());
-            descriptor.close();
-
-            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            mediaPlayer.prepareAsync();
-            mediaPlayer.setOnBufferingUpdateListener(new MediaPlayer.OnBufferingUpdateListener() {
-                @Override
-                public void onBufferingUpdate(MediaPlayer mp, int percent) {
-
-                }
-            });
-            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mp) {
-                    // 装载完毕回调
-                    //mediaPlayer.setVolume(1f, 1f);
-                    mediaPlayer.setLooping(true);
-                    mediaPlayer.start();
-
-                    mMusicHandler.postDelayed(mMusicRunnable, MUSIC_TIME);
-                }
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-            mediaPlayer = null;
-        }
-    }
-
-    public void onPause() {
-        stopMusic();
-    }
-
-    public void onResume() {
-        playMusic(mEffects.get(mEffectPositionSelect));
-    }
-
-    public interface OnEffectSelectedListener {
-
-        /**
-         * 道具贴纸选择
-         *
-         * @param effectItemName 道具贴纸文件名
-         */
-        void onEffectSelected(Effect effectItemName);
-    }
-
-    private OnEffectSelectedListener mOnEffectSelectedListener;
-
-    public void setOnEffectSelectedListener(OnEffectSelectedListener onEffectSelectedListener) {
-        mOnEffectSelectedListener = onEffectSelectedListener;
-    }
 }

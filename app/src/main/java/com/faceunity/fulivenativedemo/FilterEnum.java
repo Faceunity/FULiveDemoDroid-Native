@@ -8,56 +8,36 @@ import java.util.ArrayList;
 /**
  * Created by tujh on 2018/1/30.
  */
-
 public enum FilterEnum {
+    /**
+     * 滤镜
+     */
+    origin("origin", R.drawable.demo_icon_cancel, "原图"),
+    nature1("ziran1", R.drawable.demo_icon_natural_1, "自然 1"),
+    zhiganhui1("zhiganhui1", R.drawable.demo_icon_texture_gray1, "质感灰 1"),
+    bailiang1("bailiang1", R.drawable.demo_icon_bailiang1, "白亮 1"),
+    fennen1("fennen1", R.drawable.demo_icon_fennen1, "粉嫩 1"),
+    lengsediao1("lengsediao1", R.drawable.demo_icon_lengsediao1, "冷色调 1");
 
-    nature("origin", R.drawable.nature, "origin", Filter.FILTER_TYPE_FILTER),
-    delta("delta", R.drawable.delta, "delta", Filter.FILTER_TYPE_FILTER),
-    electric("electric", R.drawable.electric, "electric", Filter.FILTER_TYPE_FILTER),
-    slowlived("slowlived", R.drawable.slowlived, "slowlived", Filter.FILTER_TYPE_FILTER),
-    tokyo("tokyo", R.drawable.tokyo, "tokyo", Filter.FILTER_TYPE_FILTER),
-    warm("warm", R.drawable.warm, "warm", Filter.FILTER_TYPE_FILTER),
-
-    ziran("ziran", R.drawable.origin, "自然", Filter.FILTER_TYPE_BEAUTY_FILTER),
-    danya("danya", R.drawable.qingxin, "淡雅", Filter.FILTER_TYPE_BEAUTY_FILTER),
-    fennen("fennen", R.drawable.shaonv, "粉嫩", Filter.FILTER_TYPE_BEAUTY_FILTER),
-    qingxin("qingxin", R.drawable.ziran, "清新", Filter.FILTER_TYPE_BEAUTY_FILTER),
-    hongrun("hongrun", R.drawable.hongrun, "红润", Filter.FILTER_TYPE_BEAUTY_FILTER);
-
-    private String filterName;
+    private String name;
     private int resId;
     private String description;
-    private int filterType;
 
-    FilterEnum(String name, int resId, String description, int filterType) {
-        this.filterName = name;
+    FilterEnum(String name, int resId, String description) {
+        this.name = name;
         this.resId = resId;
         this.description = description;
-        this.filterType = filterType;
     }
 
-    public String filterName() {
-        return filterName;
+    public Filter create() {
+        return new Filter(name, resId, description);
     }
 
-    public int resId() {
-        return resId;
-    }
-
-    public String description() {
-        return description;
-    }
-
-    public Filter filter() {
-        return new Filter(filterName, resId, description, filterType);
-    }
-
-    public static ArrayList<Filter> getFiltersByFilterType(int filterType) {
-        ArrayList<Filter> filters = new ArrayList<>();
-        for (FilterEnum f : FilterEnum.values()) {
-            if (f.filterType == filterType) {
-                filters.add(f.filter());
-            }
+    public static ArrayList<Filter> getFilters() {
+        FilterEnum[] values = FilterEnum.values();
+        ArrayList<Filter> filters = new ArrayList<>(values.length);
+        for (FilterEnum f : values) {
+            filters.add(f.create());
         }
         return filters;
     }

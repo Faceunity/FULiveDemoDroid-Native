@@ -4,33 +4,35 @@ package com.faceunity.beautycontrolview.entity;
  * 本demo中滤镜的实体类
  * Created by tujh on 2018/2/7.
  */
-
 public class Filter {
-
-    public static final int FILTER_TYPE_FILTER = 0;
-    public static final int FILTER_TYPE_BEAUTY_FILTER = 1;
-
-    private String filterName;
-    private int resId;
+    private String name;
+    private int iconId;
     private String description;
-    private int filterType;
 
-    public Filter(String filterName, int resId, String description, int filterType) {
-        this.filterName = filterName;
-        this.resId = resId;
+    public Filter(String name, int iconId, String description) {
+        this.name = name;
+        this.iconId = iconId;
         this.description = description;
-        this.filterType = filterType;
     }
 
-    public String filterName() {
-        return filterName;
+    public String getName() {
+        return name;
     }
 
-    public int resId() {
-        return resId;
+    public int getIconId() {
+        return iconId;
     }
 
-    public String description() {
+    public String getDescription() {
         return description;
+    }
+
+    @Override
+    public String toString() {
+        return "Filter{" +
+                "name='" + name + '\'' +
+                ", resId=" + iconId +
+                ", description='" + description + '\'' +
+                '}';
     }
 }

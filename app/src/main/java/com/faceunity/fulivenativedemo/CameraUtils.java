@@ -26,7 +26,7 @@ import java.util.List;
 /**
  * Camera-related utility functions.
  */
-public class CameraUtils {
+public final class CameraUtils {
     private static final String TAG = CameraUtils.class.getSimpleName();
     private static final boolean DEBUG = false;
 
@@ -54,6 +54,7 @@ public class CameraUtils {
             case Surface.ROTATION_270:
                 degrees = 270;
                 break;
+            default:
         }
 
         int result;
@@ -104,7 +105,6 @@ public class CameraUtils {
      * specify the dimensions of the encoded video).  If it fails to find a match it just
      * uses the default preview size for video.
      * <p>
-     * TODO: should do a best-fit match, e.g.
      * https://github.com/commonsguy/cwac-camera/blob/master/camera/src/com/commonsware/cwac/camera/CameraUtils.java
      */
     public static int[] choosePreviewSize(Camera.Parameters parms, int width, int height) {

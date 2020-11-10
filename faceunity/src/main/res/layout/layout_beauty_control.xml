@@ -345,18 +345,6 @@
             android:textSize="@dimen/normal_text_size"/>
 
         <CheckBox
-            android:id="@+id/beauty_radio_beauty_filter"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@color/Transparent"
-            android:button="@null"
-            android:gravity="center"
-            android:text="美颜滤镜"
-            android:textColor="@drawable/beauty_control_bottom_radio_color"
-            android:textSize="@dimen/normal_text_size"/>
-
-        <CheckBox
             android:id="@+id/beauty_radio_filter"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

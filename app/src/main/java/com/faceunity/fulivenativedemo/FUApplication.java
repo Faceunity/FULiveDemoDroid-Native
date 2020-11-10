@@ -10,8 +10,8 @@ public class FUApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-
-        FURenderer.initFURenderer(getAssets());
+        FuNativeJni.setup();
+        FuNativeJni.loadAiModel(getAssets(), "model/ai_face_processor.bundle", FuNativeJni.FUAITYPE_FACEPROCESSOR);
     }
 
 }

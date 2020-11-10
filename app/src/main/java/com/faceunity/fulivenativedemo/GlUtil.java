@@ -16,6 +16,9 @@
 
 package com.faceunity.fulivenativedemo;
 
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.pm.ConfigurationInfo;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLES30;
@@ -29,7 +32,7 @@ import java.nio.FloatBuffer;
 /**
  * Some OpenGL utility functions.
  */
-public abstract class GlUtil {
+public final class GlUtil {
     public static final String TAG = "Grafika";
 
     /**
@@ -222,6 +225,8 @@ public abstract class GlUtil {
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T,
                 GLES20.GL_CLAMP_TO_EDGE);
         GlUtil.checkGlError("glTexParameter");
+        GLES20.glBindTexture(textureTarget, 0);
+        GlUtil.checkGlError("glBindTexture " + 0);
 
         return texId;
     }
@@ -238,5 +243,21 @@ public abstract class GlUtil {
             Matrix.multiplyMM(mvp, 0, tmp, 0, mvpMatrix, 0);
             return mvp;
         }
+    }
+
+    /**
+     * Prefer OpenGL ES 3.0, otherwise 2.0
+     *
+     * @param context
+     * @return
+     */
+    public static int getSupportGLVersion(Context context) {
+        final ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        final ConfigurationInfo configurationInfo = activityManager.getDeviceConfigurationInfo();
+        int version = configurationInfo.reqGlEsVersion >= 0x30000 ? 3 : 2;
+        String glEsVersion = configurationInfo.getGlEsVersion();
+        Log.d(TAG, "reqGlEsVersion: " + Integer.toHexString(configurationInfo.reqGlEsVersion)
+                + ", glEsVersion: " + glEsVersion + ", return: " + version);
+        return version;
     }
 }

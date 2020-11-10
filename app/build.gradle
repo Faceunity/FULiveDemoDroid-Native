@@ -1,18 +1,26 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion '27.0.3'
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
     defaultConfig {
-        applicationId "com.faceunity.fulivenativedemo"
-        minSdkVersion 18
-        targetSdkVersion 26
-        versionCode 1
-        versionName "1.0"
+        applicationId "com.faceunity.fulivenative"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode rootProject.ext.namaSdkVersionCode
+        versionName rootProject.ext.namaSdkVersionName
+        externalNativeBuild {
+            cmake {
+                cppFlags '-Wno-c++11-narrowing'
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
+            }
+        }
         ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
     }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -21,19 +29,14 @@ android {
     }
 
     externalNativeBuild {
-        ndkBuild {
-            path 'src/main/jni/Android.mk'
+        cmake {
+            path file('CMakeLists.txt')
         }
-    }
-
-    sourceSets {
-        main.assets.srcDirs += ['src/main/assets', 'src/main/effects/bundle']
-        main.res.srcDirs += ['src/mian/res', 'src/main/effects/res', 'src/main/filters/res']
     }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation project(path: ':faceunity')
 }
